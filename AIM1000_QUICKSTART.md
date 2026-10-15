@@ -50,3 +50,9 @@ python -m unittest discover -s tests
 - Scraping selectors and job-board access can change; respect each platform's terms and rate limits.
 - Never automate answers to legal eligibility, work authorization, disability, veteran status, criminal history, or other declarations without explicit review.
 - Do not store account passwords, session cookies, or API secrets in the repository.
+## 7. Visible-browser autofill (LinkedIn and selected career portals)
+After preparing a role-specific resume, run:
+```bash
+python application_executor.py 1 --profile candidate_profile.json --wait
+```
+This opens a visible browser, attempts to attach the PDF and fills only recognized factual fields from your profile. It never clicks Apply, Next, Save, or Submit. Review the page and submit manually only after explicit approval. Sensitive declarations and unrecognized questions are left for you.
