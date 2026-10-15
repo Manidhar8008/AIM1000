@@ -104,7 +104,8 @@ def import_csv(conn: sqlite3.Connection, csv_path: Path) -> tuple[int, int]:
                 score = 0
             reason = pick(row, "qualification_reason", "Score Reason")
             stamp = now()
-            cur = conn.execute(
+            existed = conn.execute("SELECT 1 FROM jobs WHERE canonical_url=?", (url,)).fetchone() is not None
+            conn.execute(
                 """INSERT INTO jobs(canonical_url,title,company,location,description,score,
                    score_reason,status,created_at,updated_at)
                    VALUES(?,?,?,?,?,?,?,'DISCOVERED',?,?)
@@ -116,13 +117,10 @@ def import_csv(conn: sqlite3.Connection, csv_path: Path) -> tuple[int, int]:
                      updated_at=excluded.updated_at""",
                 (url, title, company, location, description, score, reason, stamp, stamp),
             )
-            if cur.rowcount == 1:
-                # SQLite reports 1 for an insert and often 1 for an update; determine state by event history.
-                exists = conn.execute("SELECT COUNT(*) FROM application_events e JOIN jobs j ON j.id=e.job_id WHERE j.canonical_url=?",(url,)).fetchone()[0]
-                if exists == 0:
-                    inserted += 1
-                else:
-                    updated += 1
+            if existed:
+                updated += 1
+            else:
+                inserted += 1
     conn.commit()
     return inserted, updated
 
