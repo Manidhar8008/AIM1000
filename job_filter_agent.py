@@ -130,7 +130,9 @@ def main() -> int:
         url = canonical_url(find_value(row, URL_KEYS))
         title = find_value(row, TITLE_KEYS).lower()
         company = find_value(row, COMPANY_KEYS).lower()
-        title_key = re.sub(r"\\s+", " ", title).strip()\n        company_key = re.sub(r"\\s+", " ", company).strip()\n        dedupe_key = f"url:{url}" if url else f"title-company:{title_key}|{company_key}"
+        title_key = re.sub(r"\s+", " ", title).strip()
+        company_key = re.sub(r"\s+", " ", company).strip()
+        dedupe_key = f"url:{url}" if url else f"title-company:{title_key}|{company_key}"
         if dedupe_key.strip("|") and dedupe_key in seen:
             duplicate_count += 1
             continue
