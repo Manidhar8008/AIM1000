@@ -81,7 +81,7 @@ def field_label(element) -> str:
     element_id = element.get_attribute("id")
     if element_id:
         try:
-            labels = element._driver.find_elements("css selector", f'label[for="{element_id}"]')
+            labels = element._parent.find_elements("css selector", f'label[for="{element_id}"]')
             parts.extend(label.text or "" for label in labels)
         except Exception:
             pass
