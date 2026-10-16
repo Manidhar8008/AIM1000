@@ -1,60 +1,21 @@
 {
-  "candidate_name": "Manidhar",
+  "profile_reviewed": false,
+  "candidate_name": "",
+  "first_name": "",
+  "last_name": "",
   "email": "",
   "phone": "",
-  "location": "Warangal, Telangana, India",
+  "location": "",
+  "city": "",
+  "postal_code": "",
   "linkedin_url": "",
-  "github_url": "https://github.com/Manidhar8008",
-  "portfolio_url": "https://manidhar8008.github.io/M-V1-portfolio-/",
-  "headline": "AI Systems Builder | Python | Automation | Data & Applied AI",
-  "summary": "Builder focused on Python automation, AI-enabled workflows, and data systems. Replace this starter summary with a verified, candidate-approved summary before using the resume.",
-  "skills": [
-    "Python",
-    "FastAPI",
-    "SQL",
-    "PostgreSQL",
-    "SQLite",
-    "React",
-    "TypeScript",
-    "Automation",
-    "AI Workflows",
-    "Git",
-    "Linux"
-  ],
-  "experience": [
-    {
-      "company": "Genpact",
-      "title": "Process Developer — O2C Collections",
-      "dates": "",
-      "bullets": [
-        "Add only verified responsibilities, systems, scope, and outcomes from your actual role."
-      ]
-    },
-    {
-      "company": "Cognizant",
-      "title": "Senior Process Executive",
-      "dates": "",
-      "bullets": [
-        "Add only verified responsibilities, tools, scope, and outcomes from your actual role."
-      ]
-    }
-  ],
-  "projects": [
-    {
-      "name": "Vasuki OS",
-      "url": "",
-      "bullets": [
-        "Personal intelligence system concept focused on local-first data indexing, retrieval, and workflow orchestration. Keep this wording only if it accurately represents the current implementation."
-      ]
-    },
-    {
-      "name": "AIM1000",
-      "url": "https://github.com/Manidhar8008/AIM1000",
-      "bullets": [
-        "Job discovery and application workflow tooling with lead qualification, resume preparation, and review-queue concepts."
-      ]
-    }
-  ],
+  "github_url": "",
+  "portfolio_url": "",
+  "headline": "",
+  "summary": "",
+  "skills": [],
+  "experience": [],
+  "projects": [],
   "education": [],
   "certifications": []
 }
