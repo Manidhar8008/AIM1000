@@ -1,57 +1,48 @@
-# AIM1000 — Execution Foundation
+# AIM1000 — Product Execution and Release Plan
 
-## Product objective
-Turn the existing job discovery and resume-generation scripts into a reliable, reviewable job-application pipeline. The target is throughput (up to 1,000 qualified opportunities), not blind mass submission.
+## Product definition
+AIM1000 is a local-first job-search workflow for ingesting job leads, prioritizing them against a candidate-controlled profile, preventing duplicates, creating role-specific PDF resumes from verified facts, and managing review from a local Mission Control dashboard.
 
-## Repository baseline observed
-- `sniper_bot_final.py` and `turbo_sniper.py`: Selenium-based LinkedIn job discovery.
-- `autopilot_manager.py`: repeats scraping and resume generation on a one-hour loop using `os.system`.
-- `generate_resumes.py`: reads `Sniper_Hourly_Leads.csv` and produces resume artifacts / Mission Control output.
-- `requirements.txt`: Selenium, webdriver-manager, pandas, openpyxl.
-- `Mission_Control.html`: static HTML tracker with links to apply and download artifacts.
-- Latest repository commit returned by GitHub connector: `AI auto JOB helper` (2025-12-04).
+The throughput target is up to 1,000 **prepared opportunities per batch**, not 1,000 automatic submissions. The candidate remains accountable for the truth of resume claims and employer answers.
 
-## Main gaps
-1. No durable application/job state store.
-2. No stable deduplication and qualification stage before resume generation.
-3. No explicit state machine, retry policy, or per-job audit log.
-4. Scrape/generate orchestration uses shell calls and an infinite loop without structured exit codes or run history.
-5. No reliable application submission status model.
-6. The dashboard is a generated HTML snapshot, not a live queue.
+## Legacy repository findings
+The original repository contained LinkedIn Selenium scrapers, multiple resume generators, HTML trackers, and managers that repeatedly executed shell commands. The legacy generators included a fixed skill list or AI-written summary/project claims that were not grounded in verified candidate facts; two managers ran in unbounded loops. These entry points have been disabled in this branch. Their earlier versions remain available in Git history. Use the bounded pipeline described in `AIM1000_QUICKSTART.md`.
 
-## Implemented in this branch
-### `job_filter_agent.py`
-- Reads the current lead CSV format without requiring a database migration.
-- Finds common title/company/location/URL/description header variants.
-- Applies transparent, editable heuristic scoring and reason codes.
-- Deduplicates by canonical URL, falling back to normalized title + company.
-- Writes `Qualified_Jobs.csv`, sorted by score.
-- Labels rows `QUALIFIED_REVIEW` or `LOW_PRIORITY`.
-- Does **not** apply to jobs, send messages, or submit forms.
+## Current release implementation
+- `job_filter_agent.py`: heuristic score with reason codes, URL identity preservation, tracking-query cleanup, duplicate filtering, and malformed-row handling.
+- `application_queue.py`: SQLite local queue, transition/event log, role-specific PDF generation, profile validation, and profile-check command.
+- `aim1000_pipeline.py`: single-command bounded batch that validates the candidate profile, scores and deduplicates a CSV, imports unique qualified leads, creates at most 1,000 PDFs, and writes `Mission_Control.html`.
+- `application_executor.py`: visible-browser assistant for selected job hosts. It fills only recognized factual fields, pauses on visible password fields, attaches files only to clearly labeled resume/CV inputs, and never submits.
+- `.gitignore`: excludes private candidate JSON, local DBs, source/output CSVs, logs, generated resumes, and dashboard output.
+- `tests/`: unit tests for the most important logic and previously missed safety regressions.
+- `.github/workflows/test.yml`: CI test workflow.
 
-Run:
+## Batch workflow
 ```bash
-python job_filter_agent.py --input Sniper_Hourly_Leads.csv --output Qualified_Jobs.csv --min-score 25
+python application_queue.py profile-check --profile candidate_profile.json
+python aim1000_pipeline.py --input Sniper_Hourly_Leads.csv --profile candidate_profile.json --max-jobs 1000 --min-score 25
+python application_queue.py list
+python application_queue.py counts
+python -m unittest discover -s tests -v
 ```
 
-## Recommended state model
-`DISCOVERED → DEDUPED → QUALIFIED → PREPARED → READY_FOR_REVIEW → APPLYING → SUBMITTED`
+## Non-negotiable release guardrails
+1. Candidate facts and claims must be explicitly reviewed before generation; placeholder text blocks the run.
+2. Never invent employment dates, education, metrics, skills, certifications, or accomplishments.
+3. Keep employer-specific declarations and unknown questions under human control.
+4. Don't treat opening a page or preparing a PDF as a successful application.
+5. No automatic Submit, CAPTCHA bypass, credential storage, or hidden browser automation.
+6. Respect each job site's terms, access controls, and rate limits.
 
-Exception states: `NEEDS_HUMAN`, `FAILED_RETRYABLE`, `REJECTED`, `FOLLOW_UP_DUE`.
+## Release acceptance
+- One bounded command processes an existing CSV into a deduplicated queue, PDFs, and dashboard.
+- Re-running the same lead set is idempotent at the database URL level.
+- Private candidate/job-search artifacts are ignored by Git.
+- Unit tests and GitHub Actions pass on the final branch head.
 
-Submission must be explicit and auditable. A human-review gate should remain for employer-specific questions, consent, declarations, salary expectations, and any form that is not confidently mapped.
-
-## Next implementation sequence
-1. Add tests for header variants, duplicate URLs, missing URLs, empty CSVs, scoring, and malformed rows.
-2. Introduce SQLite as the local-first source of truth (`jobs`, `applications`, `artifacts`, `execution_logs`, `candidate_profile`, `application_answers`).
-3. Add a CLI orchestrator using subprocess argument arrays, timeouts, exit-code checks, and structured logs; remove the unbounded `os.system` loop.
-4. Generate per-job resume artifacts only for qualified jobs; retain a manifest linking job ID → resume path → score → status.
-5. Upgrade Mission Control to show queue counts, top scored jobs, missing information, artifact readiness, and status transitions.
-6. Add browser automation adapters only after stable selectors, safe retries, duplicate-submit protection, and a human confirmation step are in place.
-
-## Acceptance criteria for the first usable slice
-- One command turns a scraped CSV into a deduplicated, scored review queue.
-- Re-running it does not produce duplicate jobs in the output.
-- Every scored row contains a human-readable reason.
-- Missing input fails with a clear non-zero exit code.
-- No application is submitted automatically by this stage.
+## Known limitations before production/SaaS
+- No browser end-to-end run has been validated on the user's laptop.
+- Board selectors change and site-specific autofill must be manually checked; unsupported hosts remain manual-only.
+- Qualification weights are heuristics and currently need candidate preference/résumé-aware calibration.
+- Submission, rejection, interview, and follow-up outcomes still require a deliberate tracking action; no application is silently auto-submitted.
+- For a hosted multi-user SaaS, add authentication, tenant isolation, encrypted storage, deletion/export controls, job-provider integrations, job-source terms review, observability, and deployment security before hosting private candidate profiles.
