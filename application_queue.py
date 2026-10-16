@@ -59,8 +59,8 @@ TRACKING_QUERY_KEYS = {
     "gclid", "fbclid", "mc_cid", "mc_eid", "li_fat_id",
 }
 PLACEHOLDER_RE = re.compile(
-    r"\\b(?:add only|replace this|keep this wording|fill in|insert your|todo|tbd|placeholder)\\b"
-    r"|\\bexample\\.(?:com|net|org)\\b|\\byour\\s+(?:name|email|phone|company|role)\\b",
+    r"\b(?:add only|replace this|keep this wording|fill in|insert your|todo|tbd|placeholder)\b"
+    r"|\bexample\.(?:com|net|org)\b|\byour\s+(?:name|email|phone|company|role)\b",
     re.IGNORECASE,
 )
 
@@ -101,8 +101,8 @@ def validate_profile(profile: dict) -> list[str]:
         errors.append("candidate_name is required.")
     email = str(profile.get("email", "") or "").strip()
     phone = str(profile.get("phone", "") or "").strip()
-    valid_email = bool(re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email))
-    valid_phone = len(re.sub(r"\\D", "", phone)) >= 7
+    valid_email = bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email))
+    valid_phone = len(re.sub(r"\D", "", phone)) >= 7
     if email and not valid_email:
         errors.append("email is not a valid email address.")
     if phone and not valid_phone:
@@ -246,7 +246,7 @@ def build_resume(job: sqlite3.Row, profile: dict, output_dir: Path) -> Path:
 
     profile_errors = validate_profile(profile)
     if profile_errors:
-        raise ValueError("Candidate profile is not ready:\\n- " + "\\n- ".join(profile_errors))
+        raise ValueError("Candidate profile is not ready:\n- " + "\n- ".join(profile_errors))
     name = str(profile.get("candidate_name", "Candidate")).strip()
     output_dir.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r"[^A-Za-z0-9_-]+", "_", f"{job['company']}_{job['title']}").strip("_")[:80]
