@@ -21,7 +21,7 @@ Copy-Item candidate_profile.example.json candidate_profile.json
 code candidate_profile.json
 ```
 
-Enter your real contact details, employment dates, education, verified skills, and work/project bullets. Remove anything you cannot support. Do not add invented metrics, qualifications, employment dates, or experience. Set `"profile_reviewed": true` only after checking every field.
+Enter your real contact details, employment dates, education, verified skills, and work/project bullets. In `job_preferences`, add the exact role titles you want, preferred locations, and whether remote-only jobs are required. Remove anything you cannot support. Do not add invented metrics, qualifications, employment dates, or experience. Set `"profile_reviewed": true` only after checking every field.
 
 The private profile, database, lead files, generated resumes, and dashboard are excluded from Git by `.gitignore`. Keep them local and never commit them.
 
