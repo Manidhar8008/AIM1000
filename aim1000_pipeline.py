@@ -138,6 +138,7 @@ def run(args) -> int:
         "--input", str(args.input.resolve()),
         "--output", str(args.qualified_csv.resolve()),
         "--min-score", str(args.min_score),
+        "--profile", str(args.profile.resolve()),
     ]
     try:
         completed = subprocess.run(command, cwd=ROOT, timeout=args.timeout, check=False)
