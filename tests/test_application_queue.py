@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from application_queue import canonical_url, connect, import_csv, transition
+from application_queue import canonical_url, connect, import_csv, transition, validate_profile
 
 
 class ApplicationQueueTests(unittest.TestCase):
@@ -12,6 +12,36 @@ class ApplicationQueueTests(unittest.TestCase):
             canonical_url("https://www.example.com/jobs/1/?utm_source=x#apply"),
             "https://example.com/jobs/1",
         )
+
+    def test_canonical_url_preserves_job_identity_but_drops_tracking(self):
+        self.assertEqual(
+            canonical_url("https://www.example.org/role?job_id=731&utm_source=mail&trackingId=abc"),
+            "https://example.org/role?job_id=731",
+        )
+        self.assertEqual(canonical_url("javascript:alert(1)"), "")
+
+    def test_profile_requires_explicit_review_and_factual_body(self):
+        profile = {
+            "profile_reviewed": True,
+            "candidate_name": "Test Candidate",
+            "email": "candidate@example.org",
+            "skills": ["Python"],
+            "experience": [{"company": "Acme", "title": "Engineer", "bullets": ["Built a reporting workflow."]}],
+            "projects": [],
+        }
+        self.assertEqual(validate_profile(profile), [])
+        profile["profile_reviewed"] = False
+        self.assertTrue(any("profile_reviewed" in error for error in validate_profile(profile)))
+
+    def test_profile_placeholder_text_blocks_generation(self):
+        profile = {
+            "profile_reviewed": True,
+            "candidate_name": "Test Candidate",
+            "email": "candidate@example.org",
+            "experience": [{"company": "Acme", "title": "Engineer", "bullets": ["Add only verified experience here."]}],
+            "projects": [],
+        }
+        self.assertTrue(any("Placeholder text" in error for error in validate_profile(profile)))
 
     def test_import_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
