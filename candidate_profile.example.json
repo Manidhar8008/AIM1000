@@ -1,0 +1,26 @@
+{
+  "profile_reviewed": false,
+  "candidate_name": "",
+  "first_name": "",
+  "last_name": "",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "city": "",
+  "postal_code": "",
+  "linkedin_url": "",
+  "github_url": "",
+  "portfolio_url": "",
+  "headline": "",
+  "summary": "",
+  "skills": [],
+  "experience": [],
+  "projects": [],
+  "education": [],
+  "certifications": [],
+  "job_preferences": {
+    "target_roles": [],
+    "preferred_locations": [],
+    "remote_only": false
+  }
+}

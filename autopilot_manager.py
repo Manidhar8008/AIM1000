@@ -1,18 +1,12 @@
-import time
-import os
+#!/usr/bin/env python3
+"""Legacy entry point disabled in favor of the bounded AIM1000 batch pipeline."""
 
-print("🤖 AIM1000 AUTOPILOT ENGAGED")
-print("   Cycle: Hourly Scrape & Generate")
-print("--------------------------------")
+def main() -> int:
+    print("SAFETY STOP: legacy autopilot is disabled.")
+    print("It ran unbounded scrape/generate cycles and could invoke legacy resume generators.")
+    print("Use: python aim1000_pipeline.py --input Sniper_Hourly_Leads.csv --profile candidate_profile.json --max-jobs 1000")
+    print("AIM1000 will prepare resumes for review; it will not submit applications.")
+    return 2
 
-while True:
-    print(f"\n⏰ Starting Cycle at {time.strftime('%H:%M')}...")
-    
-    # 1. Run Sniper
-    os.system("python turbo_sniper_v3.py")
-    
-    # 2. Run AI Factory
-    os.system("python ai_factory_v2.py")
-    
-    print("✅ Cycle Complete. Sleeping for 60 minutes...")
-    time.sleep(3600)
+if __name__ == "__main__":
+    raise SystemExit(main())
