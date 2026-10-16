@@ -24,7 +24,7 @@ class ApplicationQueueTests(unittest.TestCase):
         profile = {
             "profile_reviewed": True,
             "candidate_name": "Test Candidate",
-            "email": "candidate@example.org",
+            "email": "candidate@acme.io",
             "skills": ["Python"],
             "experience": [{"company": "Acme", "title": "Engineer", "bullets": ["Built a reporting workflow."]}],
             "projects": [],
@@ -37,7 +37,7 @@ class ApplicationQueueTests(unittest.TestCase):
         profile = {
             "profile_reviewed": True,
             "candidate_name": "Test Candidate",
-            "email": "candidate@example.org",
+            "email": "candidate@acme.io",
             "experience": [{"company": "Acme", "title": "Engineer", "bullets": ["Add only verified experience here."]}],
             "projects": [],
         }
