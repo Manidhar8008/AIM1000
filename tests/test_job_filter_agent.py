@@ -15,6 +15,33 @@ class JobFilterAgentTests(unittest.TestCase):
             "https://example.com/jobs/123",
         )
 
+    def test_query_job_identifier_survives_tracking_cleanup(self):
+        self.assertEqual(
+            canonical_url("https://jobs.example.org/role?gh_jid=123&utm_campaign=test&trackingId=x"),
+            "https://jobs.example.org/role?gh_jid=123",
+        )
+        self.assertEqual(canonical_url("not a URL"), "")
+
+    def test_rows_without_identifiers_are_not_all_collapsed(self):
+        import csv
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from job_filter_agent import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, destination = root / "in.csv", root / "out.csv"
+            with source.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=["Job Title", "Company", "Apply Link"])
+                writer.writeheader()
+                writer.writerow({"Job Title": "", "Company": "", "Apply Link": ""})
+                writer.writerow({"Job Title": "", "Company": "", "Apply Link": ""})
+            with patch("sys.argv", ["job_filter_agent.py", "--input", str(source), "--output", str(destination)]):
+                self.assertEqual(main(), 0)
+            with destination.open(newline="", encoding="utf-8") as handle:
+                self.assertEqual(len(list(csv.DictReader(handle))), 2)
+
     def test_relevant_job_scores_and_explains_signals(self):
         row = {
             "Job Title": "Python Machine Learning Engineer",
