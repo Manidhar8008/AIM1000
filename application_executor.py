@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from application_queue import DB_DEFAULT, PROFILE_DEFAULT, connect
+from application_queue import DB_DEFAULT, PROFILE_DEFAULT, connect, validate_profile
 
 # Labels are intentionally conservative. Never infer eligibility or declarations.
 FIELD_RULES = (
@@ -70,6 +70,17 @@ def supported_site(url: str) -> str:
     return "generic_review_only"
 
 
+def is_resume_upload(label: str) -> bool:
+    """Only identify a resume input when its label explicitly says resume/CV."""
+    text = safe_text(label)
+    if any(term in text for term in (
+        "cover letter", "transcript", "portfolio", "writing sample",
+        "reference", "certificate", "work sample", "additional document",
+    )):
+        return False
+    return any(term in text for term in ("resume", "cv", "curriculum vitae"))
+
+
 def field_label(element) -> str:
     parts = [
         element.get_attribute("aria-label") or "",
@@ -111,6 +122,12 @@ def run(args) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         print(f"Cannot read candidate profile: {exc}", file=sys.stderr)
         return 2
+    profile_errors = validate_profile(profile)
+    if profile_errors:
+        print("PROFILE NOT READY; browser autofill stopped:", file=sys.stderr)
+        for error in profile_errors:
+            print(f"- {error}", file=sys.stderr)
+        return 2
 
     with connect(args.db) as conn:
         job = conn.execute("SELECT * FROM jobs WHERE id=?", (args.job_id,)).fetchone()
@@ -142,8 +159,15 @@ def run(args) -> int:
         WebDriverWait(driver, args.timeout).until(
             lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
         )
-        # Never click buttons or submit. This assistant only fills a limited allowlist.
-        if site != "generic_review_only":
+        # Never click buttons or submit. Pause on sign-in/account creation pages.
+        visible_password_fields = [
+            field for field in driver.find_elements(By.CSS_SELECTOR, "input[type='password']")
+            if field.is_displayed()
+        ]
+        if visible_password_fields:
+            skipped.append("Visible password field detected; sign in or finish account setup manually before autofill")
+        # Autofill only an application page, never a login/account-creation page.
+        elif site != "generic_review_only":
             for element in driver.find_elements(By.CSS_SELECTOR, "input:not([type='hidden']), textarea"):
                 try:
                     if not element.is_displayed() or not element.is_enabled():
@@ -151,9 +175,14 @@ def run(args) -> int:
                     typ = (element.get_attribute("type") or "text").lower()
                     label = field_label(element)
                     if typ == "file":
-                        element.send_keys(resume)
-                        attached = True
-                        filled.append("resume attachment")
+                        if not is_resume_upload(label):
+                            skipped.append(f"{label or '(unlabelled file input)'} [not clearly a resume/CV upload]")
+                        elif attached:
+                            skipped.append(f"{label} [resume already attached to a file input]")
+                        else:
+                            element.send_keys(resume)
+                            attached = True
+                            filled.append("resume attachment")
                         continue
                     if typ in {"checkbox", "radio", "submit", "button", "password", "file"}:
                         continue
