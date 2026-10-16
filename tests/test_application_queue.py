@@ -59,6 +59,33 @@ class ApplicationQueueTests(unittest.TestCase):
             finally:
                 conn.close()
 
+    def test_import_skips_low_priority_rows_when_status_is_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            csv_path = root / "qualified.csv"
+            with csv_path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=[
+                    "Job Title", "Company", "Apply Link", "qualification_status", "qualification_score"
+                ])
+                writer.writeheader()
+                writer.writerow({
+                    "Job Title": "Python Engineer", "Company": "Keep Co",
+                    "Apply Link": "https://example.com/jobs/keep",
+                    "qualification_status": "QUALIFIED_REVIEW", "qualification_score": "50"
+                })
+                writer.writerow({
+                    "Job Title": "Unrelated Role", "Company": "Skip Co",
+                    "Apply Link": "https://example.com/jobs/skip",
+                    "qualification_status": "LOW_PRIORITY", "qualification_score": "5"
+                })
+            conn = connect(root / "queue.db")
+            try:
+                self.assertEqual(import_csv(conn, csv_path), (1, 0))
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
+                self.assertEqual(conn.execute("SELECT company FROM jobs").fetchone()[0], "Keep Co")
+            finally:
+                conn.close()
+
     def test_state_transition_is_validated_and_audited(self):
         with tempfile.TemporaryDirectory() as tmp:
             conn = connect(Path(tmp) / "queue.db")
