@@ -17,5 +17,10 @@
   "experience": [],
   "projects": [],
   "education": [],
-  "certifications": []
+  "certifications": [],
+  "job_preferences": {
+    "target_roles": [],
+    "preferred_locations": [],
+    "remote_only": false
+  }
 }
