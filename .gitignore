@@ -9,6 +9,8 @@ venv/
 
 # Candidate / job-search private data
 candidate_profile.json
+Master_Resume.docx
+Master_Resume_*.docx
 aim1000.db
 aim1000.db-*
 *.sqlite
