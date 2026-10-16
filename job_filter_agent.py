@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import sys
 from pathlib import Path
@@ -80,7 +81,7 @@ def canonical_url(value: str) -> str:
         return ""
 
 
-def score_job(row: dict[str, str]) -> tuple[int, str]:
+def score_job(row: dict[str, str], profile: dict | None = None) -> tuple[int, str]:
     title = find_value(row, TITLE_KEYS)
     description = find_value(row, DESCRIPTION_KEYS)
     location = find_value(row, LOCATION_KEYS)
@@ -96,6 +97,48 @@ def score_job(row: dict[str, str]) -> tuple[int, str]:
         if term in text:
             score += weight
             reasons.append(f"{term}:{weight}")
+
+    preferences = profile.get("job_preferences", {}) if isinstance(profile, dict) else {}
+    if not isinstance(preferences, dict):
+        preferences = {}
+    target_roles = preferences.get("target_roles", [])
+    if isinstance(target_roles, list):
+        role_matches = [
+            str(role).strip() for role in target_roles
+            if str(role).strip() and str(role).strip().lower() in title.lower()
+        ]
+        if role_matches:
+            role_bonus = min(24, 16 + 4 * (len(role_matches) - 1))
+            score += role_bonus
+            reasons.append(f"+candidate-role-match:{role_bonus} ({', '.join(role_matches[:3])})")
+
+    candidate_skills = profile.get("skills", []) if isinstance(profile, dict) else []
+    if isinstance(candidate_skills, list):
+        matches = []
+        for item in candidate_skills:
+            skill = str(item).strip().lower()
+            if len(skill) >= 3 and skill in text and skill not in matches:
+                matches.append(skill)
+        if matches:
+            skill_bonus = min(15, 3 * len(matches))
+            score += skill_bonus
+            reasons.append(f"+candidate-skills:{skill_bonus} ({', '.join(matches[:5])})")
+
+    preferred_locations = preferences.get("preferred_locations", [])
+    if isinstance(preferred_locations, list):
+        location_matches = [
+            str(place).strip() for place in preferred_locations
+            if str(place).strip() and str(place).strip().lower() in location.lower()
+        ]
+        if location_matches:
+            score += 8
+            reasons.append(f"+preferred-location:8 ({', '.join(location_matches[:3])})")
+
+    if preferences.get("remote_only") is True:
+        remote_signals = ("remote", "work from home", "wfh", "distributed")
+        if not any(signal in text for signal in remote_signals):
+            score -= 15
+            reasons.append("-not-identified-as-remote:15")
 
     if title:
         score += 5
@@ -115,6 +158,7 @@ def main() -> int:
     parser.add_argument("--input", default="Sniper_Hourly_Leads.csv", help="Input leads CSV")
     parser.add_argument("--output", default="Qualified_Jobs.csv", help="Output review queue CSV")
     parser.add_argument("--min-score", type=int, default=25, help="Minimum score to mark QUALIFIED (default: 25)")
+    parser.add_argument("--profile", type=Path, default=None, help="Optional candidate profile for role/skill matching")
     args = parser.parse_args()
 
     if not 0 <= args.min_score <= 100:
@@ -127,6 +171,20 @@ def main() -> int:
     if source.resolve() == destination.resolve():
         print("ERROR: input and output paths must differ.", file=sys.stderr)
         return 2
+
+    profile = {}
+    if args.profile:
+        if not args.profile.is_file():
+            print(f"ERROR: candidate profile not found: {args.profile}", file=sys.stderr)
+            return 2
+        try:
+            profile = json.loads(args.profile.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"ERROR: cannot read candidate profile: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(profile, dict):
+            print("ERROR: candidate profile must be a JSON object.", file=sys.stderr)
+            return 2
 
     with source.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -162,7 +220,7 @@ def main() -> int:
         if dedupe_key:
             seen.add(dedupe_key)
 
-        score, reason = score_job(row)
+        score, reason = score_job(row, profile)
         row["qualification_score"] = str(score)
         row["qualification_reason"] = reason
         row["qualification_status"] = "QUALIFIED_REVIEW" if score >= args.min_score else "LOW_PRIORITY"
