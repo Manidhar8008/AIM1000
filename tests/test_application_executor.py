@@ -1,6 +1,6 @@
 import unittest
 
-from application_executor import infer_value, supported_site
+from application_executor import infer_value, is_resume_upload, supported_site
 
 
 class ApplicationExecutorTests(unittest.TestCase):
@@ -17,6 +17,13 @@ class ApplicationExecutorTests(unittest.TestCase):
 
     def test_unknown_question_is_left_for_review(self):
         self.assertEqual(infer_value("Why do you want to work here?", {}), (None, "unrecognized_field"))
+
+    def test_only_explicit_resume_upload_fields_are_eligible(self):
+        self.assertTrue(is_resume_upload("Upload your resume (PDF)"))
+        self.assertTrue(is_resume_upload("CV / Curriculum Vitae"))
+        self.assertFalse(is_resume_upload("Upload cover letter"))
+        self.assertFalse(is_resume_upload("Upload transcript"))
+        self.assertFalse(is_resume_upload("Attach supporting document"))
 
     def test_site_detection(self):
         self.assertEqual(supported_site("https://www.linkedin.com/jobs/view/123"), "linkedin")
