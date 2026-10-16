@@ -55,6 +55,25 @@ class JobFilterAgentTests(unittest.TestCase):
         self.assertIn("python", reason)
         self.assertIn("company", reason)
 
+    def test_candidate_role_and_skills_affect_score(self):
+        row = {
+            "Job Title": "Process Developer — O2C Collections",
+            "Company": "Example Ltd",
+            "Location": "Remote India",
+            "Job URL": "https://example.org/jobs/1",
+            "Description": "Customer operations and reconciliation workflow",
+        }
+        profile = {
+            "job_preferences": {"target_roles": ["Process Developer"], "preferred_locations": ["India"], "remote_only": True},
+            "skills": ["O2C Collections", "reconciliation"],
+        }
+        personal_score, reason = score_job(row, profile)
+        default_score, _ = score_job(row)
+        self.assertGreater(personal_score, default_score)
+        self.assertIn("candidate-role-match", reason)
+        self.assertIn("candidate-skills", reason)
+        self.assertIn("preferred-location", reason)
+
     def test_unpaid_role_receives_penalty(self):
         base = {"Job Title": "Python Engineer", "Company": "Example"}
         unpaid = {**base, "Description": "Unpaid Python Engineer"}
