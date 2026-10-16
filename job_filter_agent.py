@@ -11,7 +11,7 @@ import csv
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 TITLE_KEYS = ("title", "job title", "position", "role", "designation")
 COMPANY_KEYS = ("company", "company name", "employer", "organization", "organisation")
@@ -49,20 +49,35 @@ def find_value(row: dict[str, str], aliases: tuple[str, ...]) -> str:
     return ""
 
 
+TRACKING_QUERY_KEYS = {
+    "refid", "trackingid", "trk", "ebp", "source", "campaign",
+    "gclid", "fbclid", "mc_cid", "mc_eid", "li_fat_id",
+}
+
+
 def canonical_url(value: str) -> str:
     value = (value or "").strip()
     if not value:
         return ""
     try:
         parsed = urlparse(value)
-        if not parsed.scheme or not parsed.netloc:
-            return value.rstrip("/").lower()
-        host = parsed.netloc.lower().removeprefix("www.")
-        path = re.sub(r"/+$", "", parsed.path)
-        # Drop tracking parameters and fragments for stable deduplication.
-        return urlunparse((parsed.scheme.lower(), host, path, "", "", ""))
+        if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+            return ""
+        if parsed.username or parsed.password:
+            return ""
+        scheme = parsed.scheme.lower()
+        hostname = parsed.hostname.lower().removeprefix("www.")
+        port = parsed.port
+        if port and not ((scheme == "https" and port == 443) or (scheme == "http" and port == 80)):
+            hostname = f"{hostname}:{port}"
+        path = re.sub(r"/+$", "", parsed.path) or "/"
+        query = [
+            (key, item) for key, item in parse_qsl(parsed.query, keep_blank_values=True)
+            if not key.lower().startswith("utm_") and key.lower() not in TRACKING_QUERY_KEYS
+        ]
+        return urlunparse((scheme, hostname, path, "", urlencode(sorted(query)), ""))
     except ValueError:
-        return value.rstrip("/").lower()
+        return ""
 
 
 def score_job(row: dict[str, str]) -> tuple[int, str]:
@@ -102,6 +117,9 @@ def main() -> int:
     parser.add_argument("--min-score", type=int, default=25, help="Minimum score to mark QUALIFIED (default: 25)")
     args = parser.parse_args()
 
+    if not 0 <= args.min_score <= 100:
+        print("ERROR: --min-score must be between 0 and 100.", file=sys.stderr)
+        return 2
     source, destination = Path(args.input), Path(args.output)
     if not source.exists():
         print(f"ERROR: input file not found: {source}", file=sys.stderr)
@@ -132,11 +150,16 @@ def main() -> int:
         company = find_value(row, COMPANY_KEYS).lower()
         title_key = re.sub(r"\s+", " ", title).strip()
         company_key = re.sub(r"\s+", " ", company).strip()
-        dedupe_key = f"url:{url}" if url else f"title-company:{title_key}|{company_key}"
-        if dedupe_key.strip("|") and dedupe_key in seen:
+        if url:
+            dedupe_key = f"url:{url}"
+        elif title_key or company_key:
+            dedupe_key = f"title-company:{title_key}|{company_key}"
+        else:
+            dedupe_key = ""
+        if dedupe_key and dedupe_key in seen:
             duplicate_count += 1
             continue
-        if dedupe_key.strip("|"):
+        if dedupe_key:
             seen.add(dedupe_key)
 
         score, reason = score_job(row)
