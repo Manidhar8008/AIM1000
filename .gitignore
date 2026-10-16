@@ -1,0 +1,25 @@
+# Python / local environment
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Candidate / job-search private data
+candidate_profile.json
+aim1000.db
+aim1000.db-*
+*.sqlite
+*.sqlite3
+Sniper_Hourly_Leads.csv
+Qualified_Jobs.csv
+output/
+logs/
+resumes/
+Generated_Resumes/
+Mission_Control.html
+batch_report*.json
+cookies/
+auth_state/
